@@ -1,0 +1,717 @@
+<!doctype html>
+<html>
+<head>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<script>
+var IP = "50.4.114.231:82";
+
+function sign(x) {
+	if (x == 0) {
+		return x;
+	}
+	if (x > 0) {
+		return 1;
+	}
+	return -1;
+}
+
+
+function rand(x,y) {
+	return Math.abs(Math.cos(x * 4.312323112 + y * 543.2131212312 + 2) * 5000321321.321777) % 1;
+}
+
+function drawImage(ctx,img,x,y) {
+	try {
+		ctx.drawImage(img,x,y);
+	} catch(e) {
+		
+	}
+}
+
+var stoneTileA = new Image();
+stoneTileA.src = "resources/Stone Tile Rough.png";
+var stoneTileB = new Image();
+stoneTileB.src = "resources/Stone Tile Rough 2.png";
+
+var grassTileA = new Image();
+grassTileA.src = "resources/Grassy Overlay.png";
+var grassTileB = new Image();
+grassTileB.src = "resources/Grassy Overlay B.png";
+
+
+var skyTile = new Image();
+skyTile.src = "resources/Sky.png";
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+canvas.width = 600;
+canvas.height = 600;
+var ctx = canvas.getContext("2d");
+
+var players = [];
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+var rands = [];
+for (var i = 0; i < 10000; i++) {
+	rands[i] = rand(i*17, i % 19);
+}
+
+var world = [];
+for (var x = 0; x < 150; x++) {
+	world[x] = [];
+	for (var y = 0; y < 50; y++) {
+		world[x][y] = false;
+	}
+}
+var r = 0;
+var y = 25;
+var stretch = 7;
+var x = 0;
+var hover = false;
+var bump = 0;
+while (x < 150) {
+	if ((bump > 1 && stretch > 2) && hover) {
+		world[x][y-3] = true;
+	}
+	world[x][y] = true;
+	stretch--;
+	if (stretch <= 0) {
+		stretch = 3 + rands[r++] * 5;
+		hover = rands[r++] > 0.1 && stretch > 4;
+		var ny = y + Math.floor(rands[r++] * 7) - 3;
+		for (var i = Math.min(y,ny); i <= Math.max(y,ny); i++) {
+			world[x][i] = true;
+		}
+		y = ny;
+		bump = 0;
+	}
+	bump++;
+	x++;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// convert to many lines
+// then group and destroy
+var lines = [];
+
+function line(ax,ay,bx,by) {
+	return {ax:ax,ay:ay,bx:bx,by:by};
+}
+
+for (var x = 0; x < 150; x++) {
+	for (var y = 0; y < 50; y++) {
+		if (world[x][y]) {
+			lines.push( line(x,y,x+1,y) );
+			lines.push( line(x,y,x,y+1) );
+			lines.push( line(x,y+1,x+1,y+1) );
+			lines.push( line(x+1,y,x+1,y+1) );
+		}
+	}
+}
+
+function lineEqual(Q,R) {
+	return Q.ax == R.ax && Q.ay == R.ay && Q.bx == R.bx && Q.by == R.by;
+}
+
+function dot(ax,ay,bx,by) {
+	return ax*bx + ay*by;
+}
+
+function lineSide(line,px,py) {
+	return sign ((line.bx - line.ax)*(py - line.ay) - (line.by - line.ay)*(px - line.ax));
+
+	//return sign( (line.ax-line.bx)*(px-line.bx) - (line.ay-line.by)*(py-line.by)   );
+}
+
+function differOrZero(a,b) {
+	return a == 0 || b == 0 || a != b;
+}
+
+ctx.lineWidth = 4;
+
+function crossOne(lineA,lineB) {
+	return differOrZero( lineSide(lineA,lineB.ax,lineB.ay) , lineSide(lineA,lineB.bx,lineB.by) );
+}
+
+function cross(lineA,lineB) {
+	return crossOne(lineA,lineB) && crossOne(lineB,lineA);
+}
+
+// for these parameters, about 1700 lines
+var nlines = [];
+for (var i = 0; i < lines.length; i++) {
+	var b = true;
+	for (var j = i+1; j < lines.length; j++) {
+		if (lineEqual(lines[i],lines[j])) {
+			b = false;
+			lines.splice(j,1);
+			j--;
+		}
+	}
+	if (b) {
+		nlines.push(lines[i]);
+	}
+}
+lines = nlines;
+// now there are about 1400 lines
+
+// now we perform line merging
+
+function match(Q,R) {
+	return Q.bx == R.ax && Q.by == R.ay && sign(Q.bx-Q.ax) == sign(R.bx-R.ax) && sign(Q.by-Q.ay) == sign(R.by-R.ay);
+}
+for (var k = 0; k < 3; k++) {
+for (var i = 0; i < lines.length; i++) {
+	// check if ends meet and in same directon
+	for (var j = 0; j < lines.length; j++) {
+		if (match(lines[i],lines[j])) {
+			var first = lines[i];
+			var second = lines[j];
+			lines.splice(Math.max(i,j),1);
+			lines.splice(Math.min(i,j),1);
+			lines.push(first);
+			// delete lines[j] and extend lines[i]
+			first.bx = second.bx;
+			first.by = second.by;
+			i--;
+			break;
+		}
+	}
+}
+}
+
+for (var i = 0; i < lines.length; i++) {
+	lines[i].vertical = lines[i].ax == lines[i].bx;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+function nice(k) {
+	switch (k) {
+		case 38:
+		return "UP";
+		case 37:
+		return "LEFT";
+		case 40:
+		return "DOWN";
+		case 39:
+		return "RIGHT";
+		case 87:
+		return "W";
+		case 65:
+		return "A";
+		case 83:
+		return "S";
+		case 68:
+		return "D";
+		case 90:
+		return "Z";
+		case 88:
+		return "X";
+		case 67:
+		return "C";
+	}
+	return "";
+}
+
+var keys = {};
+function keydown(e) {
+	keys[nice(e.keyCode)] = true;
+	keys[e.keyCode] = true;
+}
+document.onkeydown = keydown;
+function keyup(e) {
+	keys[nice(e.keyCode)] = false;
+	keys[e.keyCode] = false;
+}
+document.onkeyup = keyup;
+
+
+var px = 25;
+var py = -3;
+var vy = 0;
+var vx = 0.1;
+var pw = 14/25;
+var ph = 24/25;
+var lvx = 1;
+var lvy = 0;
+
+function physics() {
+	// move player in the x direction, then y direction
+	// stop them if they collide with anything
+	// (bouncing may be more fun)
+	vy += 0.005; // gravity
+	// locate lines which can be collided with
+	var minDistance = Math.abs(vx);
+	var col = false;
+	for (var i = 0; i < lines.length; i++) {
+		var line = lines[i];
+		if (line.vertical && py+ph/2 > line.ay+1/200 && py-ph/2 < line.by -1/200) {
+			var dx = line.ax - px;
+			if (sign(dx) == sign(vx) && Math.abs(dx)-pw/2 < minDistance) {
+				minDistance = Math.abs(dx)-pw/2;
+				col = true;
+			}
+		}
+	}
+	px += minDistance * sign(vx);
+	if (col) {
+		vx = 0;
+	}
+
+	var minDistance = Math.abs(vy);
+	var col = false;
+	for (var i = 0; i < lines.length; i++) {
+		var line = lines[i];
+		if (!line.vertical && px+pw/2 > line.ax+1/200 && px-pw/2 < line.bx-1/200) {
+			line.hit = true;
+			var dy = line.ay - py;
+			if (sign(dy) == sign(vy) && Math.abs(dy)-ph/2 < minDistance) {
+				minDistance = Math.abs(dy)-ph/2;
+				col = true;
+			}
+		}
+	}
+	py += minDistance * sign(vy);
+
+	var acc = 0.01;
+	var target = 0;
+	if (keys.A || keys.LEFT) {
+		target = -0.09;
+		lvx = -1;
+	} else if (keys.D || keys.RIGHT) {
+		target = 0.09;
+		lvx = 1;
+	}
+	if (Math.abs(target-vx) < acc) {
+		vx = target;
+	} else {
+		vx += sign(target - vx) * acc;
+	}
+	if (col) {
+		if (vy >= 0 && keys.X) {
+			vy = -0.185;
+		} else {
+			vy = 0;
+		}
+	}
+	if (keys.UP) {
+		lvy = -1;
+	} else if (keys.DOWN) {
+		lvy = 1;
+	} else {
+		lvy = 0;
+	}
+	
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+function particleDraw(p) {
+	switch (p.type) {
+	
+	case "boom":
+		ctx.fillStyle = "#FFF";
+		var nonzero = 0;
+		for (var i = 0; i < p.ps.length; i++) {
+			p.ps[i].r += p.ps[i].g;
+			if (p.ps[i].r >= p.ps[i].m) {
+				p.ps[i].r = p.ps[i].m;
+				p.ps[i].g *= -1;
+			}
+			if (p.ps[i].r <= 0) {
+				continue;
+			}
+			nonzero++;
+			ctx.beginPath();
+			ctx.arc(p.ps[i].x*25,p.ps[i].y*25,p.ps[i].r*25,0,6.29);
+			ctx.fill();
+		}
+		if (nonzero == 0) {
+			p.dead = true;
+		}
+		break;
+	case "pew":
+		var nonzero = 0;
+		for (var i = 0; i < p.ps.length; i++) {
+			p.ps[i].x += p.ps[i].vx;
+			p.ps[i].y += p.ps[i].vy;
+			p.ps[i].r += p.ps[i].g;
+			if (p.ps[i].r >= p.ps[i].m) {
+				p.ps[i].r = p.ps[i].m;
+				p.ps[i].g *= -1;
+			}
+			if (p.ps[i].r <= 0) {
+				continue;
+			}
+			nonzero++;
+			ctx.fillStyle = "#FFA";
+			ctx.beginPath();
+			var r = Math.sqrt(p.ps[i].r) / 2;
+			ctx.arc(p.ps[i].x*25,p.ps[i].y*25,r*25,0,6.29);
+			ctx.fill();
+		}
+		if (nonzero == 0) {
+			p.dead = true;
+		}
+	}
+}
+function particlePew(x,y) {
+	var p = {x:x,y:y,t:0,type:"pew",ps:[]};
+	for (var i = 0; i < 15; i++) {
+		var a = Math.random() * Math.PI * 2;
+		var r = Math.random() / 2;
+		p.ps[i] = {x: x + r * Math.cos(a), y: y + r * Math.sin(a)};
+		p.ps[i].vx = Math.cos(a) / 50;
+		p.ps[i].vy = Math.sin(a) / 50;
+		p.ps[i].g = Math.random() / 20 * 1.5 + 0.01 * 1.5;
+		p.ps[i].m = Math.random() / 3 + 0.1;
+		p.ps[i].r = 0;
+		p.ps[i].a = Math.random() * Math.PI;
+	}
+	particles.push(p);
+}
+function particleBoom(x,y) {
+	var p = {x:x,y:y,t:0,type:"boom",ps:[]};
+	for (var i = 0; i < 15; i++) {
+		var a = Math.random() * Math.PI * 2;
+		var r = Math.random();
+		p.ps[i] = {x: x + r * Math.cos(a), y: y + r * Math.sin(a)};
+		p.ps[i].g = Math.random() / 20 + 0.01;
+		p.ps[i].m = Math.random() / 2;
+		p.ps[i].r = 0;
+	}
+	particles.push(p);
+}
+
+var particles = [];
+function drawParticles() {
+	for (var i = 0; i < particles.length; i++) {
+		if (particles[i].dead) {
+			particles.splice(i,1);
+			i--;
+			continue;
+		}
+		particleDraw(particles[i]);
+	}
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+var shots = [];
+function shot(x,y,vx,vy) {
+	return {x:x,y:y,vx:vx,vy:vy,time:0};
+}
+
+function moveShots() {
+	for (var i = 0; i < shots.length; i++) {
+		var shot = shots[i];
+		shot.time++;
+		if (shot.time > 100) {
+			shots.splice(i,1);
+			i--;
+			continue;
+		}
+		// see if it crosses any line
+		var hit = false;
+		var moveRay = line(shot.x,shot.y,shot.x + shot.vx,shot.y + shot.vy);
+		ctx.beginPath();
+		ctx.strokeStyle = "#F00";
+		for (var j = 0; j < lines.length; j++) {
+			if (cross(lines[j],moveRay)) {
+				ctx.moveTo(lines[j].ax*25,lines[j].ay*25);
+				ctx.lineTo(lines[j].bx*25,lines[j].by*25);
+			}
+			
+			if (cross(lines[j],moveRay)) {
+				hit = true;
+			}
+		}
+		//ctx.stroke();
+		shot.x += shot.vx;
+		shot.y += shot.vy;
+		if (hit) {
+			shot.time = 2000;
+			particlePew(shot.x,shot.y);
+		}
+
+	}
+}
+
+function drawShots() {
+	for (var i = 0; i < shots.length; i++) {
+		ctx.save();
+		ctx.translate(shots[i].x * 25,shots[i].y * 25);
+		var ang = Math.atan2(shots[i].vy,shots[i].vx);
+		ctx.rotate(ang);
+		ctx.fillStyle = "#FF0";
+		ctx.fillRect(-7,-3,14,6);
+		ctx.fillStyle = "#FFF";
+		ctx.fillRect(5,-3,6,6);
+		ctx.restore();
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+var viewx = px;
+var viewy = py;
+
+
+var timeout = 0;
+
+function signToChar(s) {
+	if (s == 0) {
+		return "0";
+	}
+	if (s < 0) {
+		return "-";
+	}
+	return "+";
+}
+
+function draw() {
+	if (keys.C && timeout <= 0) {
+		timeout = 25;
+		var sx = lvx;
+		var sy = lvy;
+		if (sy != 0 && vx == 0) {
+			sx = 0;
+		}
+		var s = shot(px,py,sx * 0.199999,sy * 0.199999);
+		shots.push(s);
+		socket.send("!shot" + signToChar(sx) + signToChar(sy) + username);
+	}
+	timeout--;
+	physics();
+	
+	ctx.clearRect(0,0,600,600);
+	ctx.fillStyle = "#1452B7";
+	ctx.fillRect(0,0,600,600);
+	ctx.save();
+	viewx = viewx * 0.9 + px * 0.1;
+	viewy = viewy * 0.9 + py * 0.1;
+	ctx.translate(Math.floor(300 - viewx*25),Math.floor(300 - viewy*25));
+	ctx.fillStyle = "#B88751";
+	for (var x = 0; x < 150; x++) {
+		for (var y = 0; y < 50; y++) {
+			if (world[x][y]) {
+				ctx.fillRect(x*25,y*25,25,25);
+				/*if (rand(x,y) < 0.5) {
+					drawImage(ctx,stoneTileA,x*25-2,y*25-2);
+				} else {
+					drawImage(ctx,stoneTileB,x*25-2,y*25-2);
+				}*/
+			}
+		}
+	}
+	ctx.fillStyle = "#2C8C2C";
+	for (var x = 0; x < 150; x++) {
+		for (var y = 0; y < 50; y++) {
+			if (world[x][y]) {
+				if (y == 0 || !world[x][y-1]) {
+					/*
+					if (rand(x,y) < 0.25 || rand(x,y) > 0.75) {
+						drawImage(ctx,grassTileA,x*25-2,y*25-4);
+					} else {
+						drawImage(ctx,grassTileB,x*25-2,y*25-4);
+					}*/
+					
+					ctx.fillRect(x*25-2,y*25-2,29,8);
+				}
+			}
+		}
+	}
+	ctx.fillStyle = "#FF3300";
+	ctx.fillRect(Math.floor(px*25 - 7), Math.floor(py*25 - 12), 14, 24)
+	for (player in lookUp) {
+		if (player != username) {
+			var pos = lookUp[player];
+			pos = pos.split(" ");
+			var x = pos[0] * 1;
+			var y = pos[1] * 1;
+			ctx.fillRect(Math.floor(x*25 - 7), Math.floor(y*25 - 12), 14, 24);
+		}
+	}
+	moveShots();
+	drawShots();
+	drawParticles();
+	ctx.restore();
+	ctx.fillStyle = "#000";
+	ctx.font = "36px Arial"
+	ctx.fillText(Math.floor(pingTime + 0.5),50,50);
+}
+
+function loop() {
+	draw();
+}
+setInterval(loop,10);
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+function charToSign(c) {
+	if (c == "0") {
+		return 0;
+	}
+	if (c == "-") {
+		return -1;
+	}
+	return 1;
+}
+
+function handleEvent(event) {
+	if (event.substring(0,4) == "shot") {
+		var sx = charToSign(event.substring(4,5));
+		var sy = charToSign(event.substring(5,6));
+		var user = event.substring(6);
+		if (user == username) {
+			return;
+		}
+		if (!lookUp[user]) {
+			return;
+		}
+		var p = lookUp[user].split(" ");
+		var s = shot(parseFloat(p[0]),parseFloat(p[1]),sx * 0.199999,sy * 0.199999);
+		shots.push(s);
+	}
+}
+
+var eventNumber = -1;
+
+var lookUp = {};
+
+var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ_";
+
+var username = "";
+var str = "";
+
+for (var i = 0; i < 5; i++) {
+	username += chars.charAt(Math.floor(Math.random()*chars.length));
+}
+
+var surplus = 0;
+
+
+var socket = new WebSocket("ws://" + IP + "/q");
+
+
+var pingCount = 0;
+
+var pingStart = 0;
+
+var pingTime = 1000;
+
+socket.onmessage = function(e) {
+	pingCount--;
+	last = e.data;
+	var ms = e.data.split("|");
+	for (var i = 0; i < ms.length; i++) {
+		getmessage(ms[i]);
+	}
+	pingTime = pingTime * 0.9 + 0.1 * (Date.now() - pingStart);
+}
+
+var last = "";
+
+function getmessage(msg) {
+	
+	if (msg.charAt(0) == "!") { // event receive
+		//console.log(msg);
+		var number = msg.substring(1,msg.indexOf(":"));
+		if (number > eventNumber) {
+			eventNumber = parseFloat(number);
+			handleEvent(msg.substring(msg.indexOf(":")+1));
+		}
+	}
+	if (msg.charAt(0) == "=") { // state set
+		lookUp[msg.substring(1,6)] = msg.substring(7);
+	}
+}
+
+socket.onopen = function() {
+	//console.log("socket loop begun");
+	setInterval(socketLoop,10);
+}
+
+var pingSend = true;
+
+function socketLoop() {
+	if (pingCount < 10) {
+		pingStart = Date.now();
+		pingCount++;
+		var str = "=" + username + ":" + px + " " + py;
+		socket.send( str );
+		if (pingSend) {
+			socket.send("=PINGG:" + pingTime);
+		}
+		socket.send("ask");
+	}
+}
+
+
+
+
+</script>
+</body>
+</html>
