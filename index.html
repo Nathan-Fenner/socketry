@@ -283,7 +283,7 @@ var ph = 24/25;
 var lvx = 1;
 var lvy = 0;
 
-function physics() {
+function playerPhysics() {
 	// move player in the x direction, then y direction
 	// stop them if they collide with anything
 	// (bouncing may be more fun)
@@ -550,7 +550,7 @@ function draw() {
 		socket.send("!shot" + signToChar(sx) + signToChar(sy) + username);
 	}
 	timeout--;
-	physics();
+	playerPhysics();
 	
 	ctx.clearRect(0,0,600,600);
 	ctx.fillStyle = "#1452B7";
