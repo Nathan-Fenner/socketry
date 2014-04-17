@@ -88,11 +88,17 @@ var stretch = 7;
 var x = 0;
 var hover = false;
 var bump = 0;
-while (x < 150) {
+
+var crystal = [];
+
+while (x < 75) {
 	if ((bump > 1 && stretch > 2) && hover) {
 		world[x][y-3] = true;
 	}
 	world[x][y] = true;
+	for (var i = y; i < 50; i++) {
+		world[x][i] = true;
+	}
 	stretch--;
 	if (stretch <= 0) {
 		stretch = 3 + rands[r++] * 5;
@@ -106,6 +112,14 @@ while (x < 150) {
 	}
 	bump++;
 	x++;
+}
+
+for (var x = 0; x < 150; x++) {
+	for (var y = 0; y < 50; y++) {
+		if (world[x][y] && rand(x,y) < 0.3 && y > 0 && world[x][y-1]) {
+			crystal.push({x:x,y:y});
+		}
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -557,7 +571,7 @@ function draw() {
 				}*/
 			}
 		}
-	}
+	}	
 	ctx.fillStyle = "#2C8C2C";
 	for (var x = 0; x < 150; x++) {
 		for (var y = 0; y < 50; y++) {
@@ -586,6 +600,22 @@ function draw() {
 			ctx.fillRect(Math.floor(x*25 - 7), Math.floor(y*25 - 12), 14, 24);
 		}
 	}
+
+	ctx.fillStyle = "#3AF";
+	for (var i = 0; i < crystal.length; i++) {
+		var c = crystal[i];
+		if (c.x <= viewx + 15 && c.x >= viewx - 15 && c.y <= viewy + 15 && c.y >= viewy - 15) {
+			for (var j = 0; j < rand(c.x + 0.5,c.y) * 2 + 4; j++) {
+				var cx = rand(c.x,c.y + 0.1 * j);
+				var cy = rand(c.x + 0.3,c.y + 0.1 * j);
+				cx = Math.floor(cx * 5) * 5;
+				cy = Math.floor(cy * 5) * 5;
+				ctx.fillStyle = "#3" + ("9AB").charAt(rand(j + c.x,c.y - j)*3|0) + ("DEF").charAt(rand(j + c.x,c.y + 1 + j)*3|0);
+				ctx.fillRect(c.x*25 + cx ,c.y*25 + cy,5,5);
+			}
+		}
+	}
+
 	moveShots();
 	drawShots();
 	drawParticles();
