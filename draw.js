@@ -1,12 +1,14 @@
+"usestrict";
 
-
-var viewx = px;
-var viewy = py;
+var viewx = 0;
+var viewy = 0;
 
 
 var timeout = 0;
 
+var zIgnore = false;
 
+var piloting = null;
 
 function draw() {
 	if (keys.C && timeout <= 0) {
@@ -22,6 +24,23 @@ function draw() {
 	}
 	timeout--;
 	playerPhysics();
+	if (keys.Z && !zIgnore) {
+		if (piloting) {
+			piloting = null;
+		} else {
+			var into = Vehicle.tryLoad();
+			piloting = into;
+		}
+		zIgnore = true;
+	} 
+	if (!keys.Z) {
+		zIgnore = false;
+	}
+	if (piloting) {
+		px = piloting.x;
+		py = piloting.y;
+		piloting.control();
+	}
 	
 	ctx.clearRect(0,0,600,600);
 	ctx.fillStyle = "#1452B7";
@@ -70,6 +89,11 @@ function draw() {
 			var y = pos[1] * 1;
 			ctx.fillRect(Math.floor(x*25 - 7), Math.floor(y*25 - 12), 14, 24);
 		}
+	}
+
+	for (var i = 0; i < vehicles.length; i++) {
+		vehicles[i].disp(ctx);
+		vehicles[i].update();
 	}
 
 	ctx.fillStyle = "#3AF";
