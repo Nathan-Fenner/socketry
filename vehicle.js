@@ -9,7 +9,7 @@ function Vehicle() {
 	this.vx = 0;
 	this.vy = 0;
 	this.disp = function(c) {
-		c.fillStyle = "#AAAA33";
+		c.fillStyle = "#DDDD22";
 		c.fillRect(  (this.x-this.w/2)*25,this.y*25,this.w*25,this.h/2*25);
 	};
 

@@ -39,6 +39,8 @@ function draw() {
 	if (piloting) {
 		px = piloting.x;
 		py = piloting.y;
+		vx = 0;
+		vy = 0;
 		piloting.control();
 	}
 	
