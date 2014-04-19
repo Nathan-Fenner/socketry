@@ -1,3 +1,5 @@
+var gravity = 0.005;
+
 function physics(px,py,pw,ph,vx,vy) {
 	// move player in the x direction, then y direction
 	// stop them if they collide with anything

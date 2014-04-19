@@ -213,3 +213,14 @@ pip-log.txt
 
 #Mr Developer
 .mr.developer.cfg
+
+!main.exe
+WebSocket.hi
+main.hi
+main.o
+World.hi
+WebSocket.o
+Tree.hi
+Tree.o
+World.o
+break.hs

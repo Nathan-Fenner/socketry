@@ -13,6 +13,7 @@ data Void
 
 main = do
 	world <- worldStart
+	putStrLn "Listening on port 82"
 	listenOn (PortNumber 82) >>= loop world
 
 loop :: MVar World -> Socket -> IO Void

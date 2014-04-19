@@ -5,10 +5,10 @@
 <body>
 
 <canvas id="canvas"></canvas>
-<script src="physics.js"></script>
-<script src="particle.js"></script>
-<script src="vehicle.js"></script>
-<script src="draw.js"></script>
+<script src="resources/physics.js"></script>
+<script src="resources/particle.js"></script>
+<script src="resources/vehicle.js"></script>
+<script src="resources/draw.js"></script>
 <script>
 var IP = "50.4.114.231:82";
 
@@ -286,43 +286,18 @@ var ph = 24/25;
 var lvx = 1;
 var lvy = 0;
 
+
 function playerPhysics() {
-	// move player in the x direction, then y direction
-	// stop them if they collide with anything
-	// (bouncing may be more fun)
-	vy += 0.005; // gravity
-	// locate lines which can be collided with
-	var minDistance = Math.abs(vx);
-	var col = false;
-	for (var i = 0; i < lines.length; i++) {
-		var line = lines[i];
-		if (line.vertical && py+ph/2 > line.ay+1/200 && py-ph/2 < line.by -1/200) {
-			var dx = line.ax - px;
-			if (sign(dx) == sign(vx) && Math.abs(dx)-pw/2 < minDistance) {
-				minDistance = Math.abs(dx)-pw/2;
-				col = true;
-			}
-		}
-	}
-	px += minDistance * sign(vx);
-	if (col) {
+
+	vy += gravity;
+
+	var res = physics(px,py,pw,ph,vx,vy);
+	px = res.x;
+	py = res.y;
+
+	if (res.col == "X" || res.col == "XY") {
 		vx = 0;
 	}
-
-	var minDistance = Math.abs(vy);
-	var col = false;
-	for (var i = 0; i < lines.length; i++) {
-		var line = lines[i];
-		if (!line.vertical && px+pw/2 > line.ax+1/200 && px-pw/2 < line.bx-1/200) {
-			line.hit = true;
-			var dy = line.ay - py;
-			if (sign(dy) == sign(vy) && Math.abs(dy)-ph/2 < minDistance) {
-				minDistance = Math.abs(dy)-ph/2;
-				col = true;
-			}
-		}
-	}
-	py += minDistance * sign(vy);
 
 	var acc = 0.01;
 	var target = 0;
@@ -338,13 +313,16 @@ function playerPhysics() {
 	} else {
 		vx += sign(target - vx) * acc;
 	}
-	if (col) {
+
+
+	if (res.col == "Y" || res.col == "XY") {
 		if (vy >= 0 && keys.X) {
 			vy = -0.185;
 		} else {
 			vy = 0;
 		}
 	}
+
 	if (keys.UP) {
 		lvy = -1;
 	} else if (keys.DOWN) {
@@ -352,9 +330,8 @@ function playerPhysics() {
 	} else {
 		lvy = 0;
 	}
-	
-}
 
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

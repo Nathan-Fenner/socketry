@@ -14,11 +14,10 @@ function Vehicle() {
 	};
 
 	this.update = function() {
+		this.vy += gravity;
 		var go = physics(this.x,this.y,this.w,this.h,this.vx,this.vy);
 		this.x = go.x;
 		this.y = go.y;
-		this.vx = go.vx;
-		this.vy = go.vy;
 		if (go.col === "XY" || go.col === "Y") {
 			this.vy = 0;
 		}
@@ -50,8 +49,6 @@ function VehiclePlane() {
 				v.vx -= 0.00315;
 			}
 		}
-		console.log(v.vy);
-
 		v.vy -= Math.abs(v.vx) * 0.07;
 		v.vy = Math.max( Math.abs(v.vx) / -2 , v.vy   );
 	}
