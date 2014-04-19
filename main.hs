@@ -58,11 +58,17 @@ sayAndClose handle given = do
 	C8.hPutStr handle given
 	hClose handle
 
+noDots str = f 0 where
+	f i
+		|i >= B.length str-1 = True
+		|B.index str i == 47 && B.index str (i+1) == 46 = False
+		|otherwise = f (i+1)
+
 respond :: MVar World -> Handle -> [B.ByteString] -> IO ()
 respond mvar handle headers
 	|null headers = sayAndClose handle $ C8.pack ""
 	|firstLine == C8.pack "GET / HTTP/1.1\r" = indexPage >>= sayAndClose handle
-	|B.take 15 firstLine == C8.pack "GET /resources/" = loadResource handle $ let r = B.drop 15 firstLine in B.take (B.length r - 10) r
+	|C8.pack "GET /resources/" `B.isPrefixOf` firstLine && noDots firstLine = loadResource handle $ let r = B.drop 15 firstLine in B.take (B.length r - 10) r
 	|firstLine == C8.pack "GET /favicon.ico HTTP/1.1\r" = sayAndClose handle $ C8.pack ""
 	|getFrom (C8.pack "Upgrade") headers == C8.pack "websocket\r" = do
 		putStrLn "Websocket request got."
@@ -71,7 +77,7 @@ respond mvar handle headers
 		putStrLn "HEADERS"
 		mapM_ C8.putStrLn headers
 		putStrLn "END"
-		return $ () -- C8.pack ""
+		return $ ()
 	where
 	firstLine = head headers
 
